@@ -150,3 +150,12 @@ media/
 
 sent_emails/
 
+
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.idea/
+*.swp
+*.swo
+*~

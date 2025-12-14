@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import (
@@ -22,7 +23,7 @@ class PostListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     paginate_by = 10
-    context_object_name = 'posts'
+    context_object_name = 'page_obj'
 
     def get_queryset(self):
         queryset = Post.objects.select_related(
@@ -139,6 +140,7 @@ class CategoryPostListView(ListView):
     model = Post
     template_name = 'blog/category.html'
     paginate_by = 10
+    context_object_name = 'page_obj'
 
     def get_queryset(self):
         self.category = get_object_or_404(
@@ -146,24 +148,21 @@ class CategoryPostListView(ListView):
             slug=self.kwargs['category_slug'],
             is_published=True
         )
-        return Post.objects.select_related(
+
+        queryset = Post.objects.select_related(
             'author', 'location', 'category'
         ).filter(
             category=self.category,
             is_published=True,
+            category__is_published=True,  # Двойная проверка
             pub_date__lte=timezone.now()
-        ).annotate(
-            comment_count_annotated=Count('comments')  # Изменяем имя
         ).order_by('-pub_date')
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['category'] = self.category
-        # Переименовываем для использования в шаблоне
-        context['page_obj'] = [
-            {**post.__dict__, 'comment_count': post.comment_count_annotated}
-            for post in context['page_obj']
-        ] if hasattr(context, 'page_obj') else []
         return context
 
 
@@ -176,17 +175,17 @@ class ProfileDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Убираем annotate для comment_count
         posts = self.object.posts.select_related(
             'location', 'category'
         ).order_by('-pub_date')
 
-        # Вместо annotate используем prefetch_related для загрузки комментариев
-        from django.db.models import Prefetch
-        posts = posts.prefetch_related('comments')
+        # Создаем пагинатор
+        paginator = Paginator(posts, 10)  # 10 постов на страницу
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
 
-        context['page_obj'] = posts
-        context['is_paginated'] = len(posts) > 10
+        context['page_obj'] = page_obj
+        context['is_paginated'] = paginator.num_pages > 1
         return context
 
 
@@ -244,6 +243,11 @@ class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     def get_success_url(self):
         return reverse('blog:post_detail', args=[self.kwargs['post_id']])
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if 'form' in context:
+            del context['form']
+        return context
 
 def registration(request):
     if request.method == 'POST':
