@@ -3,10 +3,30 @@
   Лента записей
 {% endblock %}
 {% block content %}
-  {% for post in page_obj %}
-    <article class="mb-5">
-      {% include "includes/post_card.html" %}
-    </article>
-  {% endfor %}
+  {% if page_obj %}
+    {% for post in page_obj %}
+      <article class="mb-5">
+        {% include "includes/post_card.html" %}
+      </article>
+    {% endfor %}
+  {% else %}
+    <div class="col d-flex justify-content-center">
+      <div class="card" style="width: 40rem;">
+        <div class="card-body">
+          <h5 class="card-title text-center">Пока нет публикаций</h5>
+          <p class="card-text text-center">
+            Будьте первым, кто поделится чем-то интересным!
+          </p>
+          {% if user.is_authenticated %}
+            <div class="text-center">
+              <a href="{% url 'blog:create_post' %}" class="btn btn-primary">
+                Создать пост
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
   {% include "includes/paginator.html" %}
 {% endblock %}
