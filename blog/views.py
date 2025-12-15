@@ -1,6 +1,5 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -41,10 +40,8 @@ class PostListView(ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
-        """Добавляем дополнительную информацию в контекст"""
         context = super().get_context_data(**kwargs)
 
-        # Добавляем информацию о текущем пользователе
         context['user'] = self.request.user
 
         # Логируем контекст для отладки
@@ -60,7 +57,7 @@ class PostDetailView(DetailView):
     def get_queryset(self):
         queryset = super().get_queryset().select_related(
             'author', 'location', 'category'
-        ).annotate(comment_count_annotated=Count('comments'))  # Изменяем имя
+        ).annotate(comment_count_annotated=Count('comments'))
 
         if self.request.user.is_authenticated:
             post = queryset.first()
@@ -76,7 +73,6 @@ class PostDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
         context['comments'] = self.object.comments.select_related('author')
-        # Добавляем comment_count для шаблона
         context['post'].comment_count = self.object.comments.count()
         return context
 
@@ -154,7 +150,7 @@ class CategoryPostListView(ListView):
         ).filter(
             category=self.category,
             is_published=True,
-            category__is_published=True,  # Двойная проверка
+            category__is_published=True,
             pub_date__lte=timezone.now()
         ).order_by('-pub_date')
 

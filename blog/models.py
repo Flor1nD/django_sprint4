@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 
 User = get_user_model()
 
@@ -90,10 +89,7 @@ class Post(BaseModel):
     def __str__(self):
         return self.title
 
-    # УБИРАЕМ property comment_count ИЛИ ПЕРЕИМЕНОВЫВАЕМ
-    # Вместо property будем использовать метод или уберем совсем
     def get_comment_count(self):
-        """Метод для получения количества комментариев"""
         return self.comments.count()
 
 
