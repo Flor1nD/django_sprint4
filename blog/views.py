@@ -44,7 +44,6 @@ class PostListView(ListView):
 
         context['user'] = self.request.user
 
-        # Логируем контекст для отладки
         print(f"DEBUG: В контекст передано {len(context.get('posts', []))} постов")
 
         return context
